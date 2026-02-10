@@ -301,6 +301,87 @@ def get_sensor(id_origin_y=15):
     return cam_top
 
 
+def get_sensor_rgb(id_origin_y=15):
+    """
+    Create sensor for depth rendering using scalar_rgb variant.
+    Uses AOV film to capture depth channel.
+    """
+    cam_top = mi.load_dict({
+        'type': 'perspective',
+        'to_world': mi.scalar_rgb.Transform4f.look_at(
+            target=[0, 0, 0],
+            origin=[0, id_origin_y, 0],
+            up=[0, 0, 1]),
+        'fov': 75,
+        'film': {
+            'type': 'hdrfilm',
+            'width': 1024,
+            'height': 1024,
+        }
+    })
+    return cam_top
+
+
+def render_depth_scene(count, random_lesion, random_timePoint, lesion_directory,
+                       lesionScale=1.5, yOffset_lesion=-2):
+    """
+    Create scene for depth-only rendering using AOV integrator.
+    Uses simpler materials (diffuse) since we only need geometry.
+
+    This function creates a minimal scene with the same geometry as the
+    full render but with simple diffuse materials. The AOV integrator
+    captures the depth (ray-surface intersection distance).
+
+    Args:
+        count: Model ID (for epidermis mesh)
+        random_lesion: Lesion ID
+        random_timePoint: Timepoint for lesion growth
+        lesion_directory: Path to lesion OBJ files
+        lesionScale: Scale factor for lesion (default 1.5)
+        yOffset_lesion: Y offset for lesion positioning (default -2)
+
+    Returns:
+        Mitsuba scene object configured for depth rendering
+    """
+    uniformScale = 1
+    yOffset = -1.5
+
+    scene = {
+        'type': 'scene',
+        'integrator': {
+            'type': 'aov',
+            'aovs': 'dd.y:depth',
+            'nested': {'type': 'direct'}
+        }
+    }
+
+    # Add lesion geometry with simple diffuse material
+    scene['lesion'] = {
+        'type': 'obj',
+        'filename': f'{lesion_directory}/lesion{random_lesion}_T{random_timePoint:03d}.obj',
+        'to_world': mi.ScalarTransform4f.scale(uniformScale * lesionScale).translate(
+            [0, yOffset_lesion, 0]),
+        'bsdf': {'type': 'diffuse', 'reflectance': {'type': 'rgb', 'value': [0.5, 0.5, 0.5]}}
+    }
+
+    # Add epidermis geometry
+    scene['epidermis'] = {
+        'type': 'obj',
+        'filename': config.sDir + f'outputModels/epidermis_{count:03d}.obj',
+        'to_world': mi.ScalarTransform4f.scale(uniformScale).translate([0, yOffset, 0]),
+        'bsdf': {'type': 'diffuse', 'reflectance': {'type': 'rgb', 'value': [0.5, 0.5, 0.5]}}
+    }
+
+    # Add directional light from above for depth pass
+    scene['light'] = {
+        'type': 'directional',
+        'direction': [0, -1, 0],
+        'irradiance': {'type': 'rgb', 'value': 1.0}
+    }
+
+    return mi.load_dict(scene)
+
+
 def get_l_model():  # model ID
     l_model = list(range(100))
     for x in [2, 14, 32, 54, 59, 61]:  # remove non-working models

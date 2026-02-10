@@ -1,5 +1,8 @@
-sDir = '../../data/supporting_data/materials/'  # directory where the skin layer models will be stored
-sDir_lesion_ver0 = '../../data/supporting_data/materials/lesions_release/ver0/'
-sDir_lesion_ver1 = '../../data/supporting_data/materials/lesions_release/ver1/'
-sDir_hdri = '../../data/supporting_data/hdri/'  # directory where lighting HDRI files are stored
-param_dir = '../../data/supporting_data/'  # directory where the .csv files are stored
+# Base data directory (relative to code/data_generation/)
+_data_base = '/workspace/hector/ssynth-release/data/supporting_data/'
+
+sDir = _data_base + 'materials/'  # directory where the skin layer models will be stored
+sDir_lesion_ver0 = _data_base + 'materials/lesions_release/ver0/'
+sDir_lesion_ver1 = _data_base + 'materials/lesions_release/ver1/'
+sDir_hdri = _data_base + 'hdri/'  # directory where lighting HDRI files are stored
+param_dir = _data_base  # directory where the .csv files are stored

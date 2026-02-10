@@ -9,8 +9,10 @@ import argparse
 import os
 import pandas as pd
 import time
+import numpy as np
 import config
 import util
+import depth_utils
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -120,3 +122,54 @@ if __name__ == "__main__":
             mi.util.write_bitmap(save_folder + "/image.png", ref_image)
             total_time = time.time() - start_time
             print('render image time ' + str(total_time))
+
+            # Render depth using AOV integrator with scalar_rgb variant
+            print('\nrendering depth..')
+            start_time = time.time()
+
+            # Switch to scalar_rgb variant for depth pass (AOV requires it)
+            mi.set_variant('scalar_rgb')
+
+            # Create depth scene with simplified geometry
+            scene_depth = util.render_depth_scene(
+                id_model, id_lesion, id_timePoint,
+                lesion_directory=lesion_directory,
+                lesionScale=id_lesionScale,
+                yOffset_lesion=offset
+            )
+
+            # Create sensor for depth rendering
+            sensor_depth = util.get_sensor_rgb(id_origin_y=id_origin_y)
+
+            # Render depth - spp=1 is sufficient for deterministic depth
+            depth_image = mi.render(scene_depth, sensor=sensor_depth, spp=1)
+            depth_array = np.array(depth_image)
+
+            # Extract depth AOV channel (channel index 3, after RGB)
+            # The AOV 'dd.y:depth' places depth in the 4th channel
+            if depth_array.ndim == 3 and depth_array.shape[2] >= 4:
+                depth_channel = depth_array[:, :, 3]
+            else:
+                # Fallback: use first channel if format differs
+                depth_channel = depth_array[:, :, 0] if depth_array.ndim == 3 else depth_array
+
+            # Save depth in MoGe-compatible format
+            depth_utils.save_depth_moge(save_folder + "/depth.png", depth_channel, id_origin_y)
+
+            # Save camera intrinsics metadata
+            depth_utils.save_meta_json(
+                save_folder + "/meta.json",
+                fov_deg=75,
+                width=1024,
+                height=1024,
+                additional_meta={
+                    'camera_height': id_origin_y,
+                    'depth_unit_mm': 1.0
+                }
+            )
+
+            # Switch back to spectral variant for consistency
+            mi.set_variant('scalar_spectral')
+
+            total_time = time.time() - start_time
+            print('render depth time ' + str(total_time))
