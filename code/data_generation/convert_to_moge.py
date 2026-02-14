@@ -25,7 +25,7 @@ from PIL import Image
 # Add local imports
 import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from depth_utils import save_meta_json, load_depth_moge, validate_depth
+from depth_utils import save_meta_json, load_depth_moge, validate_depth, normalize_intrinsics, compute_intrinsics
 
 
 def find_ssynth_instances(ssynth_output_dir):
@@ -122,13 +122,25 @@ def convert_ssynth_to_moge(ssynth_output_dir, moge_dataset_dir,
                     if validation['warnings']:
                         print(f"  Warning in {instance_name}: {validation['warnings']}")
 
-            # Copy or generate meta.json
+            # Copy or generate meta.json with NORMALIZED intrinsics
             meta_src = os.path.join(folder, "meta.json")
             meta_dst = os.path.join(instance_dir, "meta.json")
             if instance_info['has_meta']:
-                shutil.copy(meta_src, meta_dst)
+                # Load existing meta and ensure intrinsics are normalized
+                with open(meta_src) as f:
+                    meta = json.load(f)
+                K = np.array(meta['intrinsics'])
+                # Detect pixel-space intrinsics (fx > 10 means pixel-space)
+                if K[0, 0] > 10:
+                    w = meta.get('width', 1024)
+                    h = meta.get('height', 1024)
+                    K = normalize_intrinsics(K, w, h)
+                    meta['intrinsics'] = K.tolist()
+                with open(meta_dst, 'w') as f:
+                    json.dump(meta, f, indent=2)
             else:
                 # Generate default meta.json for S-SYNTH camera settings
+                # save_meta_json now saves normalized intrinsics
                 save_meta_json(meta_dst, fov_deg=75, width=1024, height=1024)
 
             # Copy mask as optional segmentation
@@ -244,8 +256,11 @@ def validate_moge_dataset(dataset_dir, num_samples=20):
                     K = np.array(meta['intrinsics'])
                     if K.shape != (3, 3):
                         errors.append(f"Invalid intrinsics shape in {instance}")
-                    elif K[0, 0] < 100 or K[0, 0] > 2000:
-                        errors.append(f"Unusual focal length in {instance}: {K[0, 0]}")
+                    elif K[0, 0] > 10:
+                        # Intrinsics appear to be in pixel-space, not normalized
+                        errors.append(f"Pixel-space intrinsics (fx={K[0, 0]:.1f}) in {instance}, expected normalized (fx<2)")
+                    elif K[0, 0] < 0.1 or K[0, 0] > 5.0:
+                        errors.append(f"Unusual normalized focal length in {instance}: {K[0, 0]:.3f}")
             except Exception as e:
                 errors.append(f"Failed to read meta.json in {instance}: {e}")
 

@@ -135,9 +135,36 @@ def load_depth_moge(path):
     return depth, metadata
 
 
+def normalize_intrinsics(K, width, height):
+    """
+    Normalize pixel-space intrinsics to [0,1] range expected by MoGe.
+
+    MoGe's dataloader expects normalized intrinsics where:
+        fx_norm = fx / width,  cx_norm = cx / width
+        fy_norm = fy / height, cy_norm = cy / height
+
+    Args:
+        K: 3x3 numpy array of pixel-space intrinsics
+        width: Image width in pixels
+        height: Image height in pixels
+
+    Returns:
+        3x3 numpy array of normalized intrinsics
+    """
+    K_norm = K.copy()
+    K_norm[0, 0] /= width   # fx
+    K_norm[0, 2] /= width   # cx
+    K_norm[1, 1] /= height  # fy
+    K_norm[1, 2] /= height  # cy
+    return K_norm
+
+
 def save_meta_json(path, fov_deg=75, width=1024, height=1024, additional_meta=None):
     """
     Save camera intrinsics and metadata in MoGe-compatible JSON format.
+
+    Intrinsics are saved in NORMALIZED form (divided by image dimensions),
+    as expected by MoGe's dataloader.
 
     Args:
         path: Output file path (.json)
@@ -146,9 +173,10 @@ def save_meta_json(path, fov_deg=75, width=1024, height=1024, additional_meta=No
         height: Image height in pixels
         additional_meta: Optional dictionary of additional metadata to include
     """
-    intrinsics = compute_intrinsics(fov_deg, width, height)
+    intrinsics_pixel = compute_intrinsics(fov_deg, width, height)
+    intrinsics_norm = normalize_intrinsics(intrinsics_pixel, width, height)
     meta = {
-        'intrinsics': intrinsics.tolist(),
+        'intrinsics': intrinsics_norm.tolist(),
         'fov_deg': fov_deg,
         'width': width,
         'height': height
@@ -157,7 +185,8 @@ def save_meta_json(path, fov_deg=75, width=1024, height=1024, additional_meta=No
         meta.update(additional_meta)
 
     with open(path, 'w') as f:
-        json.dump(meta, f, indent=2)
+        json.dump(meta, f, indent=2, default=lambda x: int(x) if isinstance(x, np.integer) else
+                  float(x) if isinstance(x, np.floating) else str(x))
 
 
 def save_depth_raw(path, depth_array):

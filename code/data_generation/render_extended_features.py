@@ -21,7 +21,9 @@ import mitsuba as mi
 
 try:
     mi.set_variant('cuda_ad_spectral')
-    print("Using CUDA spectral variant (GPU)")
+    import drjit as dr
+    dr.set_flag(dr.JitFlag.Debug, True)  # Workaround for CUDA 12.7 driver miscompilation
+    print("Using CUDA spectral variant (GPU, debug mode)")
 except:
     mi.set_variant('scalar_spectral')
     print("Falling back to scalar spectral (CPU)")
@@ -271,6 +273,14 @@ def render_depth_proper(model_id, lesion_configs, camera_height=15, fov=75,
             'bsdf': simple_bsdf
         }
 
+    # Floor (matches RGB scene so all visible pixels have depth)
+    room_size = 20
+    scene_dict['wall_floor'] = {
+        'type': 'rectangle',
+        'to_world': mi.ScalarTransform4f.scale([room_size, 1, room_size]).translate([0, -room_size, 0]).rotate([1, 0, 0], -90),
+        'bsdf': simple_bsdf
+    }
+
     # Light
     scene_dict['light'] = {
         'type': 'directional',
@@ -372,6 +382,8 @@ def render_sample_with_depth(model_id, lesion_configs, melanin, blood_frac,
     # === Render RGB Image ===
     print(f"    Rendering RGB...")
     mi.set_variant('cuda_ad_spectral')
+    import drjit as dr
+    dr.set_flag(dr.JitFlag.Debug, True)  # Required for CUDA 12.7 driver workaround
 
     scene_dict = create_multi_lesion_scene(
         model_id, lesion_configs, melanin, blood_frac, light_name, hair_model
@@ -433,6 +445,7 @@ def render_sample_with_depth(model_id, lesion_configs, melanin, blood_frac,
 
     # Switch back to spectral
     mi.set_variant('cuda_ad_spectral')
+    dr.set_flag(dr.JitFlag.Debug, True)
 
     return result
 
@@ -471,7 +484,7 @@ def create_multi_lesion_scene(model_id, lesion_configs, melanin, blood_frac,
         'type': 'scene',
         'integrator': {
             'type': 'volpathmis',
-            'max_depth': 1000
+            'max_depth': 50
         }
     }
 
@@ -800,7 +813,7 @@ def create_scaled_skin_scene(model_id, lesion_configs, melanin, blood_frac,
         'type': 'scene',
         'integrator': {
             'type': 'volpathmis',
-            'max_depth': 1000
+            'max_depth': 50
         }
     }
 
