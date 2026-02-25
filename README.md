@@ -8,13 +8,16 @@ Dermatological practice routinely involves measuring and tracking lesion size, m
 
 ## Key Results
 
-| Method | SKINL2 Scale | WoundsDB Scale | DDI Ratio | Fairness Gap |
-|--------|:---:|:---:|:---:|:---:|
-| MoGe-2 (base) | 16.10x | 0.62x | 81.0x | 10.9x |
-| DA3 | 4.16x | 0.67x | 53.6x | 34.9x |
-| **DermDepth** | **0.87x** | **0.91x** | **1.95x** | **1.0x** |
+| Method | Params | SKINL2 Scale | SI-d1 (%) | WoundsDB Scale | SI-d1 (%) | DDI Ratio |
+|--------|:---:|:---:|:---:|:---:|:---:|:---:|
+| DA3 | 1.4B | 4.16x | 99.6 | 0.67x | 89.1 | 53.6x |
+| MapAnything | 1.1B | 10.88x | 99.3 | 0.75x | 80.7 | 156.1x |
+| PPD | 831M | 16.21x | 92.0 | 0.66x | 91.3 | 90.4x |
+| MoGe-2 | 331M | 16.10x | 100.0 | 0.62x | 91.1 | 81.0x |
+| DermDepth_S | 2.1M ft | 1.11x | 100.0 | 0.28x | 91.1 | 9.2x |
+| **DermDepth** | **2.1M ft** | **0.87x** | **100.0** | **0.91x** | **92.6** | **1.95x** |
 
-Scale ratio target = 1.0x. Fairness gap target = 1.0x.
+Scale ratio and DDI ratio target = 1.0x. DermDepth_S: synthetic data only. Eval on held-out test sets.
 
 ## Repository Structure
 
