@@ -1,87 +1,153 @@
-# S-SYNTH: Knowledge-Based, Synthetic Generation of Skin Images
+# DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology
 
-**This repository contains code used in the paper:**
+**MICCAI 2025**
 
-"_S-SYNTH: Knowledge-Based, Synthetic Generation of Skin Images_"
+Foundation depth models produce excellent relative geometry on dermatological images but systematically mis-estimate metric scale by 4-38x, making them unusable for clinical measurement. DermDepth corrects this by fine-tuning only the scale prediction head (2.1M of 331M parameters, <1%) of MoGe-2 on **D-Synth**, a new synthetic dermoscopic dataset with pixel-perfect 3D ground truth. Progressive refinement with small amounts of real clinical data (346 samples) achieves near-perfect metric scale across three diverse benchmarks, with equitable performance across Fitzpatrick skin tones.
 
-[Andrea Kim](https://www.linkedin.com/in/andreakim91), [Niloufar Saharkhiz](https://www.linkedin.com/in/niloufar-saharkhiz/), [Elena Sizikova](https://esizikova.github.io/), [Miguel Lago](https://www.linkedin.com/in/milaan/), [Berkman Sahiner](https://www.linkedin.com/in/berkman-sahiner-6aa9a919/), [Jana Delfino](https://www.linkedin.com/in/janadelfino/), [Aldo Badano](https://www.linkedin.com/in/aldobadano/)
+## Key Results
 
-International Conference on Medical Image Computing and Computer Assisted Intervention (MICCAI) 2024
+| Method | SKINL2 Scale | WoundsDB Scale | DDI Ratio | Fairness Gap |
+|--------|:---:|:---:|:---:|:---:|
+| MoGe-2 (base) | 16.10x | 0.62x | 81.0x | 10.9x |
+| DA3 | 4.16x | 0.67x | 53.6x | 34.9x |
+| **DermDepth** | **0.87x** | **0.91x** | **1.95x** | **1.0x** |
 
-- **Paper:** [https://arxiv.org/abs/2408.00191](https://arxiv.org/abs/2408.00191)
-- **Code:** [https://github.com/DIDSR/ssynth-release](https://github.com/DIDSR/ssynth-release)
-- **Data:** [https://huggingface.co/datasets/didsr/ssynth_data](https://huggingface.co/datasets/didsr/ssynth_data)
-- **Demo:** [https://didsr.github.io/ssynth-release/](https://didsr.github.io/ssynth-release/)
+Scale ratio target = 1.0x. Fairness gap target = 1.0x.
 
-![](./images/overview.png)
-
-The contributions of our work are:
-
-- We describe S-SYNTH, an open-source, flexible framework for creation of highly-detailed 3D skin models and digitally rendered synthetic images of diverse human skin tones, with full control of underlying parameters and the image formation process.
-- We systematically evaluate S-SYNTH synthetic images for training and testing applications. Specifically, we show S-SYNTH synthetic images improve segmentation performance when only a limited set of real images is available for training. We also show comparative trends between S-SYNTH synthetic images and real-patient examples (according to skin color and lesion size) are similar.
-
-## Table of Contents
-
-1. Framework
-2. Code
-3. Data
-4. Citation
-5. Related Links
-6. Disclaimer
-
-## Framework
-
-We present S-SYNTH, the first knowledge-based, adaptable open-source skin simulation framework to rapidly generate synthetic skin models and images using digital rendering of an anatomically inspired multi-layer, multi-component skin and growing lesion model. The skin model allows for controlled variation in skin appearance, such as skin color, presence of hair, lesion size, skin and lesion colors, and blood fraction among other parameters. We use this framework to study the effect of possible variations on the development and evaluation of AI models for skin lesion segmentation, and show that results obtained using synthetic data follow similar comparative trends as real dermatologic images, while mitigating biases and limitations from existing datasets including small dataset size, mislabeled examples, and lack of diversity.
-
-S-SYNTH can be used to generate synthetic skin images with annotations (including segmentation masks) with variations:
-
-![](./images/variation.png)
-
-**Usage:** S-SYNTH relies on [Houdini](https://www.sidefx.com/) for creating of skin layers and [Mitsuba](https://mitsuba-renderer.org/) for rendering.
-
-## Code
-
-Please see `code` directory for:
-
-- Code for generating materials, skin models, and synthetic skin lesions
-- Training of a segmentation model using associated images
-- Evaluating performance on real skin images from [HAM10K](https://dataverse.harvard.edu/dataset.xhtml?persistentId=doi:10.7910/DVN/DBW86T) and [ISIC18](https://challenge.isic-archive.com/data/) datasets.
-
-## Data
-
-Associated data for this repository, including pre-generated synthetic skin examples and their masks, can be found in a Hugging face dataset repo ([S-SYNTH data](https://huggingface.co/datasets/didsr/ssynth_data)).
-
-<!--## Repository Structure
+## Repository Structure
 
 ```
-├── code
-|   ├── test.py
-├── examples
-├── images
-├── LICENSE
-└── README.md
-```-->
+dermdepth/
+├── code/
+│   ├── analysis/             # Dataset exploration and baseline analysis
+│   ├── annotation/           # DDI ruler annotation tools
+│   ├── data_generation/      # D-Synth rendering and MoGe format conversion
+│   │   ├── generate_dermdepth_dataset.py   # Main D-Synth generation script
+│   │   ├── convert_to_moge.py              # S-SYNTH → MoGe format converter
+│   │   ├── convert_eval_to_moge.py         # WoundsDB/SKINL2 → MoGe format
+│   │   ├── create_ddi_training_data.py     # DDI pseudo-GT from ruler areas
+│   │   └── depth_utils.py                  # Depth encoding and intrinsics utils
+│   ├── evaluation/           # Metric evaluation scripts
+│   │   ├── eval_depth.py                   # Main depth evaluation (scale, AbsRel, SI-d1)
+│   │   ├── eval_ddi_rulers.py              # DDI ruler-based evaluation + fairness
+│   │   ├── eval_normals.py                 # Surface normal evaluation
+│   │   └── eval_baselines.py               # Baseline model evaluation
+│   └── visualization/        # Paper figure generation
+├── configs/                  # MoGe-2 training configs for all experiments
+├── notebooks/
+│   └── generate_dermdepth_colab.ipynb      # Colab notebook for D-Synth generation
+├── scripts/                  # Evaluation shell scripts
+└── LICENSE
+```
+
+## Setup
+
+### Dependencies
+
+DermDepth builds on [MoGe-2](https://github.com/microsoft/MoGe). Clone and install it first:
+
+```bash
+git clone https://github.com/microsoft/MoGe.git
+cd MoGe && pip install -e .
+```
+
+Then install additional dependencies:
+
+```bash
+pip install accelerate mlflow-skinny
+```
+
+For D-Synth data generation, you also need [Mitsuba 3](https://mitsuba-renderer.org/) and [S-SYNTH assets](https://huggingface.co/datasets/didsr/ssynth_data).
+
+### Data
+
+Download evaluation datasets from their original sources:
+
+- **SKINL2**: [Plenoptic dermoscopic depth](https://figshare.com/articles/dataset/SKINL2_-_Skin_Lesion_Light_Field_Dataset/6626502) (de Faria et al., 2019)
+- **WoundsDB**: [Time-of-flight wound depth](http://www.ii.uj.edu.pl/~jusz/WoundsDB.html) (Juszczyk et al., 2020)
+- **DDI**: [Diverse Dermatology Images](https://stanfordaimi.azurewebsites.net/datasets/35866158-8196-48d8-87bf-50dca81df965) (Daneshjou et al., 2022)
+
+Then prepare for training/evaluation:
+
+```bash
+# Convert evaluation datasets to MoGe format
+python code/data_generation/convert_eval_to_moge.py --dataset skinl2 --input data/SKINL2 --output data/dermdepth_train/skinl2_moge
+python code/data_generation/convert_eval_to_moge.py --dataset woundsdb --input data/DB_ALL --output data/dermdepth_train/woundsdb_moge
+
+# Create DDI pseudo-GT from ruler annotations
+python code/data_generation/create_ddi_training_data.py --input data/DDI --output data/dermdepth_train/ddi_moge
+```
+
+### Pretrained Model
+
+Download the MoGe-2 pretrained weights from [HuggingFace](https://huggingface.co/Ruicheng/moge-2-vitl-normal):
+
+```bash
+cd MoGe && python -c "from huggingface_hub import hf_hub_download; hf_hub_download('Ruicheng/moge-2-vitl-normal', 'pretrained_moge2.pt', local_dir='.')"
+```
+
+## Training
+
+DermDepth uses progressive training with scale-head-only fine-tuning:
+
+```bash
+cd MoGe
+
+# Stage 1: Synthetic-only (scale head, ~2.5h on 1x A100)
+python -m moge.train --config ../configs/dermdepth_exp_a.json --workspace ../output/training/exp_a
+
+# Stage 2: + Real data (WoundsDB + SKINL2)
+python -m moge.train --config ../configs/dermdepth_exp_g.json --workspace ../output/training/exp_g
+
+# Stage 3: + DDI pseudo-GT (best model)
+python -m moge.train --config ../configs/dermdepth_exp_h.json --workspace ../output/training/exp_h
+```
+
+## Evaluation
+
+```bash
+# Evaluate on SKINL2
+python code/evaluation/eval_depth.py --model MoGe/pretrained_moge2.pt --dataset skinl2 --split test
+
+# Evaluate on WoundsDB
+python code/evaluation/eval_depth.py --model MoGe/pretrained_moge2.pt --dataset woundsdb --split test
+
+# Evaluate on DDI (with ruler GT and fairness analysis)
+python code/evaluation/eval_ddi_rulers.py --model MoGe/pretrained_moge2.pt --split test
+
+# Evaluate baselines (DA3, MapAnything, PPD)
+python code/evaluation/eval_baselines.py --method da3 --dataset skinl2
+```
+
+## D-Synth Dataset
+
+Generate synthetic dermoscopic training data with metric-scale 3D ground truth:
+
+```bash
+# Local generation (requires Mitsuba 3 + S-SYNTH assets)
+python code/data_generation/generate_dermdepth_dataset.py --num_samples 3000 --output data/dermdepth_train/dsynth
+
+# Or use the Colab notebook for cloud generation
+# See notebooks/generate_dermdepth_colab.ipynb
+```
 
 ## Citation
 
-```
-@article{kim2024ssynth,
-  title={Knowledge-based in silico models and dataset for the comparative evaluation of mammography AI for a range of breast characteristics, lesion conspicuities and doses},
-  author={Kim, Andrea and Saharkhiz, Niloufar and Sizikova, Elena and Lago, Miguel, and Sahiner, Berkman and Delfino, Jana G., and Badano, Aldo},
-  journal={International Conference on Medical Image Computing and Computer Assisted Intervention (MICCAI)},
-  volume={},
-  pages={},
-  year={2024}
+```bibtex
+@inproceedings{dermdepth2025,
+  title={DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology},
+  author={Anonymized},
+  booktitle={International Conference on Medical Image Computing and Computer Assisted Intervention (MICCAI)},
+  year={2025}
 }
 ```
 
-## Related Links
+## Acknowledgments
 
-1. [FDA Catalog of Regulatory Science Tools to Help Assess New Medical Devices](https://www.fda.gov/medical-devices/science-and-research-medical-devices/catalog-regulatory-science-tools-help-assess-new-medical-devices).
-2. A. Badano, M. Lago, E. Sizikova, J. G. Delfino, S. Guan, M. A. Anastasio, B. Sahiner. [The stochastic digital human is now enrolling for in silico imaging trials—methods and tools for generating digital cohorts.](http://dx.doi.org/10.1088/2516-1091/ad04c0) Progress in Biomedical Engineering 2023.
+This work builds on:
+- [MoGe-2](https://github.com/microsoft/MoGe) (Wang et al., 2025) for the base architecture
+- [S-SYNTH](https://github.com/DIDSR/ssynth-release) (Kim et al., MICCAI 2024) for the synthetic skin rendering framework
 
-## Disclaimer
+## License
 
-<sub>
-This software and documentation (the "Software") were developed at the Food and Drug Administration (FDA) by employees of the Federal Government in the course of their official duties. Pursuant to Title 17, Section 105 of the United States Code, this work is not subject to copyright protection and is in the public domain. Permission is hereby granted, free of charge, to any person obtaining a copy of the Software, to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, or sell copies of the Software or derivatives, and to permit persons to whom the Software is furnished to do so. FDA assumes no responsibility whatsoever for use by other parties of the Software, its source code, documentation or compiled executables, and makes no guarantees, expressed or implied, about its quality, reliability, or any other characteristic. Further, use of this code in no way implies endorsement by the FDA or confers any advantage in regulatory decisions. Although this software can be redistributed and/or modified freely, we ask that any derivative works bear some notice that they are derived from it, and any modified versions bear some notice that they have been modified.
-</sub>
+See [LICENSE](LICENSE) for details.

@@ -31,7 +31,7 @@ except:
 import config
 import depth_utils
 
-OUTPUT_DIR = "/workspace/hector/ssynth-release/test_output/extended_features"
+OUTPUT_DIR = "./output/extended_features"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Standard parameters
@@ -272,14 +272,6 @@ def render_depth_proper(model_id, lesion_configs, camera_height=15, fov=75,
             'to_world': mi.ScalarTransform4f.scale(scale).translate([pos_x, lesion_offset, pos_z]),
             'bsdf': simple_bsdf
         }
-
-    # Floor (matches RGB scene so all visible pixels have depth)
-    room_size = 20
-    scene_dict['wall_floor'] = {
-        'type': 'rectangle',
-        'to_world': mi.ScalarTransform4f.scale([room_size, 1, room_size]).translate([0, -room_size, 0]).rotate([1, 0, 0], -90),
-        'bsdf': simple_bsdf
-    }
 
     # Light
     scene_dict['light'] = {

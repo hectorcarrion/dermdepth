@@ -146,19 +146,41 @@ def compute_depth_metrics(pred_depth, gt_depth, mask=None, is_metric=True):
     return metrics
 
 
-def eval_woundsdb(model, data_dir, output_dir, device="cuda", min_coverage=0.5):
+def load_split(split_file):
+    """Load a split file (train.txt or test.txt) and return set of sample names."""
+    if not Path(split_file).exists():
+        return None
+    return set(Path(split_file).read_text().strip().split("\n"))
+
+
+def eval_woundsdb(model, data_dir, output_dir, device="cuda", min_coverage=0.5, split=None):
     """
     Evaluate on prepared WoundsDB data.
+
+    Args:
+        split: If 'train' or 'test', only evaluate on that subset.
+               Reads split from data/dermdepth_train/woundsdb_moge/{split}.txt
     """
+    split_label = f" ({split} split)" if split else ""
     print("\n" + "=" * 60)
-    print("Evaluating on WoundsDB")
+    print(f"Evaluating on WoundsDB{split_label}")
     print("=" * 60)
 
     save_dir = Path(output_dir) / "woundsdb"
     save_dir.mkdir(parents=True, exist_ok=True)
 
+    # Load split filter if specified
+    split_names = None
+    if split:
+        split_file = PROJECT_ROOT / "data" / "dermdepth_train" / "woundsdb_moge" / f"{split}.txt"
+        split_names = load_split(split_file)
+        if split_names is None:
+            print(f"  WARNING: Split file {split_file} not found, evaluating all")
+
     # Find prepared scenes
     scene_dirs = sorted([d for d in Path(data_dir).iterdir() if d.is_dir()])
+    if split_names is not None:
+        scene_dirs = [d for d in scene_dirs if d.name in split_names]
     print(f"  Found {len(scene_dirs)} prepared scenes")
 
     all_metrics = []
@@ -242,22 +264,37 @@ def eval_woundsdb(model, data_dir, output_dir, device="cuda", min_coverage=0.5):
     return results
 
 
-def eval_skinl2(model, data_dir, output_dir, device="cuda"):
+def eval_skinl2(model, data_dir, output_dir, device="cuda", split=None):
     """
     Evaluate on prepared SKINL2 data.
 
     Supports both metric evaluation (depth in meters, verified from paper)
     and scale-invariant metrics. Checks meta.json per sample for is_metric flag.
+
+    Args:
+        split: If 'train' or 'test', only evaluate on that subset.
+               Reads split from data/dermdepth_train/skinl2_moge/{split}.txt
     """
+    split_label = f" ({split} split)" if split else ""
     print("\n" + "=" * 60)
-    print("Evaluating on SKINL2")
+    print(f"Evaluating on SKINL2{split_label}")
     print("=" * 60)
 
     save_dir = Path(output_dir) / "skinl2"
     save_dir.mkdir(parents=True, exist_ok=True)
 
+    # Load split filter if specified
+    split_names = None
+    if split:
+        split_file = PROJECT_ROOT / "data" / "dermdepth_train" / "skinl2_moge" / f"{split}.txt"
+        split_names = load_split(split_file)
+        if split_names is None:
+            print(f"  WARNING: Split file {split_file} not found, evaluating all")
+
     # Find prepared samples
     sample_dirs = sorted([d for d in Path(data_dir).iterdir() if d.is_dir()])
+    if split_names is not None:
+        sample_dirs = [d for d in sample_dirs if d.name in split_names]
     print(f"  Found {len(sample_dirs)} prepared samples")
 
     all_metrics = []
@@ -398,6 +435,9 @@ def main():
                         help='Min GT coverage to include a WoundsDB scene (default 0.5)')
     parser.add_argument('--model_name', type=str, default='model',
                         help='Name for this model run (used in output path)')
+    parser.add_argument('--split', type=str, default=None,
+                        choices=['train', 'test'],
+                        help='Evaluate only on train or test split (reads split files from data/dermdepth_train/)')
     args = parser.parse_args()
 
     output_dir = os.path.join(args.output_dir, args.model_name)
@@ -417,11 +457,11 @@ def main():
 
     if args.dataset in ('woundsdb', 'all'):
         data_dir = args.data_dir or eval_default_dirs['woundsdb']
-        eval_woundsdb(model, data_dir, output_dir, args.device, min_coverage=args.min_coverage)
+        eval_woundsdb(model, data_dir, output_dir, args.device, min_coverage=args.min_coverage, split=args.split)
 
     if args.dataset in ('skinl2', 'all'):
         data_dir = args.data_dir or eval_default_dirs['skinl2']
-        eval_skinl2(model, data_dir, output_dir, args.device)
+        eval_skinl2(model, data_dir, output_dir, args.device, split=args.split)
 
     print(f"\nResults saved to {output_dir}")
 

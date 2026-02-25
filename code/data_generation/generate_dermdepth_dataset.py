@@ -98,7 +98,7 @@ HDRI_LIGHTS = [
 # Camera tilt: continuous sampling in [0, 30] degrees with random azimuth.
 # Most real derm photos are roughly top-down with slight tilt,
 # so we use beta(2, 5) distribution peaking ~8-10° with a tail to 30°.
-MAX_TILT_DEG = 30
+MAX_TILT_DEG = 10
 
 
 def sample_lesion_config(rng):
@@ -149,7 +149,7 @@ def sample_parameters(num_samples, seed=42):
             tilt_x = tilt_mag * np.cos(np.radians(tilt_dir))
             tilt_z = tilt_mag * np.sin(np.radians(tilt_dir))
             angle = (round(tilt_x, 2), round(tilt_z, 2))
-            skin_scale = rng.uniform(0.8, 1.5)
+            skin_scale = rng.uniform(1.0, 1.5)
             # ~25% chance no hair, otherwise random from 100 models
             if rng.random() < 0.25:
                 hair_model = -1
@@ -162,7 +162,7 @@ def sample_parameters(num_samples, seed=42):
             # Ensure center lesion is at (0,0)
             lesion_configs[0]['position'] = (0, 0)
 
-            camera_height = rng.uniform(12, 20)
+            camera_height = rng.uniform(12, 16)
             spp = 128
 
             samples.append({
@@ -198,7 +198,7 @@ def render_single_sample(params, output_dir, fov=75):
     sample_dir = os.path.join(output_dir, sample_name)
 
     # Skip if already rendered
-    if os.path.exists(os.path.join(sample_dir, "image.png")) and \
+    if os.path.exists(os.path.join(sample_dir, "image.jpg")) and \
        os.path.exists(os.path.join(sample_dir, "depth.png")):
         return {'sample_id': sample_id, 'status': 'skipped', 'name': sample_name}
 
@@ -221,11 +221,17 @@ def render_single_sample(params, output_dir, fov=75):
             spp=params['spp'],
         )
 
-        # Rename files to MoGe-compatible names
+        # Rename/convert files to MoGe-compatible names
+        # RGB: convert PNG to JPEG (MoGe hardcodes image.jpg)
+        rgb_src = os.path.join(sample_dir, "render_rgb.png")
+        rgb_dst = os.path.join(sample_dir, "image.jpg")
+        if os.path.exists(rgb_src) and not os.path.exists(rgb_dst):
+            from PIL import Image as PILImage
+            PILImage.open(rgb_src).save(rgb_dst, quality=95)
+            os.remove(rgb_src)
         for src_name, dst_name in [
-            (f"render_rgb.png", "image.png"),
-            (f"render_depth.png", "depth.png"),
-            (f"render_meta.json", "meta.json"),
+            ("render_depth.png", "depth.png"),
+            ("render_meta.json", "meta.json"),
         ]:
             src = os.path.join(sample_dir, src_name)
             dst = os.path.join(sample_dir, dst_name)

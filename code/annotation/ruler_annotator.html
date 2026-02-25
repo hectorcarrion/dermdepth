@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>DermDepth DDI Ruler Annotator</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+         background: #1a1a2e; color: #eee; display: flex; height: 100vh; }
+  #sidebar { width: 300px; background: #16213e; padding: 12px; overflow-y: auto;
+             border-right: 1px solid #333; flex-shrink: 0; }
+  #sidebar h2 { font-size: 14px; margin-bottom: 8px; color: #a8d8ea; }
+  .sample-btn { display: block; width: 100%; padding: 6px 8px; margin: 2px 0;
+                background: #0f3460; border: 1px solid #333; color: #ccc;
+                cursor: pointer; text-align: left; font-size: 11px; border-radius: 3px; }
+  .sample-btn:hover { background: #1a4080; }
+  .sample-btn.active { background: #e94560; color: #fff; border-color: #e94560; }
+  .sample-btn.annotated { border-left: 3px solid #4ecca3; }
+  .sample-btn .tone-badge { display: inline-block; padding: 1px 4px; border-radius: 2px;
+                            font-size: 9px; margin-right: 4px; }
+  .tone-12 { background: #f5d0a9; color: #333; }
+  .tone-34 { background: #c68642; color: #fff; }
+  .tone-56 { background: #5c3317; color: #fff; }
+  #main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+  #toolbar { padding: 8px 12px; background: #16213e; display: flex; gap: 8px;
+             align-items: center; border-bottom: 1px solid #333; flex-wrap: wrap; }
+  #toolbar button { padding: 5px 12px; border: 1px solid #555; background: #0f3460;
+                    color: #eee; cursor: pointer; border-radius: 3px; font-size: 12px; }
+  #toolbar button:hover { background: #1a4080; }
+  #toolbar button.danger { background: #c0392b; border-color: #e74c3c; }
+  #toolbar button.success { background: #27ae60; border-color: #2ecc71; }
+  #info { font-size: 11px; color: #aaa; margin-left: auto; }
+  #canvas-wrap { flex: 1; overflow: auto; display: flex; justify-content: center;
+                 align-items: flex-start; padding: 10px; }
+  canvas { cursor: crosshair; border: 1px solid #333; }
+  #status { padding: 6px 12px; background: #16213e; font-size: 11px; color: #aaa;
+            border-top: 1px solid #333; }
+  .filter-row { margin-bottom: 8px; }
+  .filter-row select { width: 100%; padding: 4px; background: #0f3460; color: #eee;
+                       border: 1px solid #333; border-radius: 3px; font-size: 11px; }
+  .stats { font-size: 11px; color: #888; margin-bottom: 8px; padding: 4px;
+           background: #0a1929; border-radius: 3px; }
+  .instructions { font-size: 11px; color: #aaa; margin-top: 12px; padding: 8px;
+                  background: #0a1929; border-radius: 3px; line-height: 1.5; }
+  .instructions b { color: #4ecca3; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <h2>DDI Ruler Annotation</h2>
+  <div class="stats" id="stats">Loading...</div>
+  <div class="filter-row">
+    <select id="tone-filter" onchange="filterSamples()">
+      <option value="all">All skin tones</option>
+      <option value="12">Fitzpatrick I-II</option>
+      <option value="34">Fitzpatrick III-IV</option>
+      <option value="56">Fitzpatrick V-VI</option>
+    </select>
+  </div>
+  <div class="filter-row">
+    <select id="ruler-filter" onchange="filterSamples()">
+      <option value="all">All images</option>
+      <option value="unannotated">Unannotated only</option>
+      <option value="annotated">Annotated only</option>
+    </select>
+  </div>
+  <div id="sample-list"></div>
+  <div class="instructions">
+    <b>Instructions:</b><br>
+    1. Click the <b>first</b> point on a ruler tick<br>
+    2. Click the <b>second</b> point exactly 1cm away<br>
+    3. Press <b>S</b> to save<br><br>
+    <b>Shortcuts:</b><br>
+    <b>Z</b> — Undo last point<br>
+    <b>X</b> — Clear points<br>
+    <b>S</b> — Save annotation<br>
+    <b>&larr;/&rarr;</b> — Navigate samples<br>
+    <b>N</b> — Skip (no ruler visible)
+  </div>
+</div>
+<div id="main">
+  <div id="toolbar">
+    <button onclick="undoPoint()">Undo (Z)</button>
+    <button class="danger" onclick="clearPoints()">Clear (X)</button>
+    <button class="success" onclick="saveAnnotation()">Save 1cm (S)</button>
+    <button onclick="markNoRuler()">No Ruler (N)</button>
+    <button onclick="prevSample()">&larr; Prev</button>
+    <button onclick="nextSample()">Next &rarr;</button>
+    <span id="info">Click two points exactly 1cm apart on the ruler</span>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="canvas"></canvas>
+  </div>
+  <div id="status">Ready</div>
+</div>
+
+<script>
+let samples = [];
+let currentIdx = -1;
+let points = [];
+let img = new Image();
+let annotations = {};
+const canvas = document.getElementById('canvas');
+const ctx = canvas.getContext('2d');
+
+async function init() {
+  const resp = await fetch('/api/samples');
+  samples = await resp.json();
+  const annResp = await fetch('/api/annotations');
+  annotations = await annResp.json();
+  updateStats();
+  renderSampleList();
+  if (samples.length > 0) loadSample(0);
+}
+
+function updateStats() {
+  const total = samples.length;
+  const annotated = Object.keys(annotations).filter(k => annotations[k].type === 'ruler').length;
+  const noRuler = Object.keys(annotations).filter(k => annotations[k].type === 'no_ruler').length;
+  document.getElementById('stats').textContent =
+    `${total} images | ${annotated} annotated | ${noRuler} no ruler | ${total - annotated - noRuler} remaining`;
+}
+
+function renderSampleList() {
+  const toneFilter = document.getElementById('tone-filter').value;
+  const rulerFilter = document.getElementById('ruler-filter').value;
+  const list = document.getElementById('sample-list');
+  list.innerHTML = '';
+  samples.forEach((s, i) => {
+    if (toneFilter !== 'all' && s.skin_tone !== toneFilter) return;
+    const ann = annotations[s.key];
+    if (rulerFilter === 'annotated' && !ann) return;
+    if (rulerFilter === 'unannotated' && ann) return;
+    const btn = document.createElement('button');
+    btn.className = 'sample-btn' + (i === currentIdx ? ' active' : '')
+                    + (ann ? ' annotated' : '');
+    const badge = `<span class="tone-badge tone-${s.skin_tone}">FP ${s.skin_tone}</span>`;
+    btn.innerHTML = badge + s.filename;
+    btn.title = `${s.filename} | ${s.disease} | skin_tone=${s.skin_tone}`;
+    btn.onclick = () => loadSample(i);
+    list.appendChild(btn);
+  });
+}
+
+function filterSamples() { renderSampleList(); }
+
+async function loadSample(idx) {
+  currentIdx = idx;
+  const s = samples[idx];
+  img = new Image();
+  img.onload = () => {
+    canvas.width = img.width;
+    canvas.height = img.height;
+    const ann = annotations[s.key];
+    if (ann && ann.type === 'ruler') {
+      points = ann.points.map(p => [...p]);
+    } else {
+      points = [];
+    }
+    draw();
+    renderSampleList();
+    const ann_status = annotations[s.key]
+      ? (annotations[s.key].type === 'no_ruler' ? ' [NO RULER]' : ` [ANNOTATED: ${pixelDist()}px]`)
+      : '';
+    setStatus(`${s.filename} | ${s.disease} | FP ${s.skin_tone} (${img.width}x${img.height})${ann_status}`);
+  };
+  img.src = '/api/image/' + s.filename;
+}
+
+function pixelDist() {
+  if (points.length < 2) return '?';
+  const dx = points[1][0] - points[0][0];
+  const dy = points[1][1] - points[0][1];
+  return Math.sqrt(dx*dx + dy*dy).toFixed(1);
+}
+
+function draw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(img, 0, 0);
+  if (points.length === 0) return;
+
+  // Draw line between points
+  if (points.length === 2) {
+    ctx.beginPath();
+    ctx.moveTo(points[0][0], points[0][1]);
+    ctx.lineTo(points[1][0], points[1][1]);
+    ctx.strokeStyle = '#e94560';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Distance label
+    const mx = (points[0][0] + points[1][0]) / 2;
+    const my = (points[0][1] + points[1][1]) / 2;
+    ctx.font = '14px monospace';
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(`${pixelDist()}px = 1cm`, mx + 8, my - 8);
+    ctx.fillText(`${pixelDist()}px = 1cm`, mx + 8, my - 8);
+  }
+
+  // Draw points
+  points.forEach((p, i) => {
+    // Crosshair
+    ctx.beginPath();
+    ctx.moveTo(p[0] - 10, p[1]); ctx.lineTo(p[0] + 10, p[1]);
+    ctx.moveTo(p[0], p[1] - 10); ctx.lineTo(p[0], p[1] + 10);
+    ctx.strokeStyle = i === 0 ? '#4ecca3' : '#e94560';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Circle
+    ctx.beginPath();
+    ctx.arc(p[0], p[1], 6, 0, Math.PI * 2);
+    ctx.fillStyle = i === 0 ? '#4ecca3' : '#e94560';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Label
+    ctx.font = '12px monospace';
+    ctx.fillStyle = '#fff';
+    ctx.fillText(i === 0 ? 'A' : 'B', p[0] + 10, p[1] - 10);
+  });
+}
+
+canvas.addEventListener('click', (e) => {
+  if (points.length >= 2) return;
+  const rect = canvas.getBoundingClientRect();
+  const scaleX = canvas.width / rect.width;
+  const scaleY = canvas.height / rect.height;
+  const x = Math.round((e.clientX - rect.left) * scaleX);
+  const y = Math.round((e.clientY - rect.top) * scaleY);
+  points.push([x, y]);
+  draw();
+  if (points.length === 1) {
+    setStatus(`Point A at (${x}, ${y}) — now click point B (1cm away on ruler)`);
+  } else {
+    setStatus(`Point B at (${x}, ${y}) — distance: ${pixelDist()}px. Press S to save.`);
+  }
+});
+
+function undoPoint() {
+  if (points.length > 0) points.pop();
+  draw();
+  setStatus(points.length === 0 ? 'Cleared' : `Point A set, click point B`);
+}
+
+function clearPoints() {
+  points = [];
+  draw();
+  setStatus('Cleared');
+}
+
+async function saveAnnotation() {
+  if (points.length !== 2) {
+    setStatus('Need exactly 2 points (1cm apart on ruler)');
+    return;
+  }
+  const s = samples[currentIdx];
+  const data = {
+    key: s.key, filename: s.filename, skin_tone: s.skin_tone, disease: s.disease,
+    type: 'ruler', points: points, distance_mm: 10.0,
+    pixel_distance: parseFloat(pixelDist()),
+    width: canvas.width, height: canvas.height
+  };
+  const resp = await fetch('/api/save', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  const result = await resp.json();
+  annotations[s.key] = data;
+  updateStats();
+  renderSampleList();
+  setStatus(`Saved: ${s.filename} — ${pixelDist()}px = 1cm`);
+  // Auto-advance to next unannotated
+  for (let i = currentIdx + 1; i < samples.length; i++) {
+    if (!annotations[samples[i].key]) { loadSample(i); return; }
+  }
+}
+
+async function markNoRuler() {
+  const s = samples[currentIdx];
+  const data = {
+    key: s.key, filename: s.filename, skin_tone: s.skin_tone, disease: s.disease,
+    type: 'no_ruler', width: canvas.width, height: canvas.height
+  };
+  const resp = await fetch('/api/save', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(data)
+  });
+  annotations[s.key] = data;
+  updateStats();
+  renderSampleList();
+  setStatus(`Marked ${s.filename} as NO RULER`);
+  // Auto-advance
+  for (let i = currentIdx + 1; i < samples.length; i++) {
+    if (!annotations[samples[i].key]) { loadSample(i); return; }
+  }
+}
+
+function prevSample() {
+  if (currentIdx > 0) loadSample(currentIdx - 1);
+}
+function nextSample() {
+  if (currentIdx < samples.length - 1) loadSample(currentIdx + 1);
+}
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'z' || e.key === 'Z') undoPoint();
+  else if (e.key === 'x' || e.key === 'X') clearPoints();
+  else if (e.key === 's' || e.key === 'S') { e.preventDefault(); saveAnnotation(); }
+  else if (e.key === 'n' || e.key === 'N') markNoRuler();
+  else if (e.key === 'ArrowLeft') prevSample();
+  else if (e.key === 'ArrowRight') nextSample();
+});
+
+function setStatus(msg) {
+  document.getElementById('status').textContent = msg;
+}
+
+init();
+</script>
+</body>
+</html>

@@ -1,0 +1,128 @@
+{
+    "data": {
+        "aspect_ratio_range": [0.8, 1.2],
+        "area_range": [250000, 1000000],
+        "clamp_max_depth": 100.0,
+        "center_augmentation": 0.25,
+        "fov_range_absolute": [30, 120],
+        "fov_range_relative": [0.7, 1.0],
+        "image_augmentation": ["jittering", "jpeg_loss", "blurring", "shot_noise"],
+        "datasets": [
+            {
+                "name": "DermDepth-Synth",
+                "path": "./data/dermdepth_train/colab_gen/DermDepthSynth/",
+                "label_type": "A",
+                "weight": 1.0,
+                "depth_unit": 0.001,
+                "fov_range_relative": [0.8, 1.0],
+                "aspect_ratio_range": [0.8, 1.2],
+                "image_augmentation": ["jittering", "jpeg_loss", "blurring", "shot_noise"]
+            },
+            {
+                "name": "WoundsDB-train",
+                "path": "./data/dermdepth_train/woundsdb_moge/",
+                "index": "train.txt",
+                "label_type": "A",
+                "weight": 3.0,
+                "depth_unit": 1.0,
+                "fov_range_relative": [0.7, 1.0],
+                "aspect_ratio_range": [0.8, 1.2],
+                "image_augmentation": ["jittering", "jpeg_loss", "blurring", "shot_noise"]
+            },
+            {
+                "name": "SKINL2-train",
+                "path": "./data/dermdepth_train/skinl2_moge/",
+                "index": "train.txt",
+                "label_type": "A",
+                "weight": 4.0,
+                "depth_unit": 1.0,
+                "fov_range_relative": [0.7, 1.0],
+                "aspect_ratio_range": [0.8, 1.2],
+                "image_augmentation": ["jittering", "jpeg_loss", "blurring", "shot_noise"]
+            }
+        ]
+    },
+    "model_version": "v2",
+    "model": {
+        "encoder": {
+            "backbone": "dinov2_vitl14",
+            "intermediate_layers": [5, 11, 17, 23],
+            "dim_out": 1024
+        },
+        "neck": {
+            "dim_in": [1026, 2, 2, 2, 2],
+            "dim_out": null,
+            "dim_res_blocks": [1024, 256, 128, 64, 32],
+            "num_res_blocks": [0, 2, 2, 2, 0],
+            "res_block_in_norm": "none",
+            "res_block_hidden_norm": "none",
+            "resamplers": ["conv_transpose", "conv_transpose", "conv_transpose", "bilinear"]
+        },
+        "points_head": {
+            "dim_in": [1024, 256, 128, 64, 32],
+            "dim_out": [null, null, null, null, 3],
+            "dim_res_blocks": [1024, 256, 128, 64, 32],
+            "num_res_blocks": [0, 1, 1, 1, 0],
+            "res_block_in_norm": "none",
+            "res_block_hidden_norm": "none",
+            "resamplers": ["conv_transpose", "conv_transpose", "conv_transpose", "bilinear"]
+        },
+        "normal_head": {
+            "dim_in": [1024, 256, 128, 64, 32],
+            "dim_out": [null, null, null, null, 3],
+            "dim_res_blocks": [1024, 256, 128, 64, 32],
+            "num_res_blocks": [0, 1, 1, 1, 0],
+            "res_block_in_norm": "none",
+            "res_block_hidden_norm": "none",
+            "resamplers": ["conv_transpose", "conv_transpose", "conv_transpose", "bilinear"]
+        },
+        "mask_head": {
+            "dim_in": [1024, 256, 128, 64, 32],
+            "dim_out": [null, null, null, null, 1],
+            "dim_res_blocks": [1024, 256, 128, 64, 32],
+            "num_res_blocks": [0, 1, 1, 1, 0],
+            "res_block_in_norm": "none",
+            "res_block_hidden_norm": "none",
+            "resamplers": ["conv_transpose", "conv_transpose", "conv_transpose", "bilinear"]
+        },
+        "scale_head": {
+            "dims": [1024, 1024, 1024, 1]
+        },
+        "remap_output": "exp",
+        "num_tokens_range": [1200, 3600]
+    },
+    "__comment": "Experiment G: Real-data fine-tuning with stratified SKINL2 split (all versions in train+test). Starting from Exp A step 1000 EMA. SKINL2 w=4.0, WoundsDB w=3.0. Scale head only, LR 5e-5, 2K iter.",
+    "optimizer": {
+        "type": "AdamW",
+        "params": [
+            {"params": {"include": ["scale_head.*"]}, "lr": 5e-5},
+            {"params": {"include": ["*"], "exclude": ["scale_head.*"]}, "lr": 0.0}
+        ]
+    },
+    "lr_scheduler": {
+        "type": "SequentialLR",
+        "params": {
+            "schedulers": [
+                {"type": "LambdaLR", "params": {"lr_lambda": ["1.0", "max(0.0, min(1.0, (epoch - 50) / 100))"]}},
+                {"type": "StepLR", "params": {"step_size": 1000, "gamma": 0.5}}
+            ],
+            "milestones": [150]
+        }
+    },
+    "low_resolution_training_steps": 500,
+    "loss": {
+        "invalid": {},
+        "A": {
+            "global": {"function": "affine_invariant_global_loss", "weight": 0.01, "params": {"align_resolution": 48}},
+            "metric_scale": {"function": "metric_scale_loss", "weight": 1.0}
+        },
+        "B": {
+            "global": {"function": "affine_invariant_global_loss", "weight": 0.01, "params": {"align_resolution": 48}},
+            "metric_scale": {"function": "metric_scale_loss", "weight": 1.0}
+        },
+        "C": {
+            "global": {"function": "affine_invariant_global_loss", "weight": 0.01, "params": {"align_resolution": 48}},
+            "metric_scale": {"function": "metric_scale_loss", "weight": 1.0}
+        }
+    }
+}

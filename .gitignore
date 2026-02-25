@@ -98,9 +98,36 @@ dmypy.json
 .DS_Store
 Thumbs.db
 
-# Project specific
+# ============================================
+# Project specific — external dependencies
+# ============================================
 MoGe/
-output/
-*.pdf
+baseline_methods/
+
+# Data (download from original sources, see README)
 data/
+
+# Training/evaluation outputs
+output/
 test_output/
+
+# Paper drafts and reference PDFs
+drafts/
+papers/
+
+# S-SYNTH legacy assets (not part of DermDepth)
+docs/
+images/
+files/
+code/processing/
+
+# Misc artifacts
+*.mp4
+*.pdf
+ddi_000379_d3_package/
+PAPER_OUTLINE.md
+ddi_label_analysis.py
+lesion_reconstruction.mp4
+
+# Claude Code
+.claude/
