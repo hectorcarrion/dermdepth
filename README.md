@@ -19,6 +19,42 @@ Dermatological practice routinely involves measuring and tracking lesion size, m
 
 Scale ratio and DDI ratio target = 1.0x. DermDepth_S: synthetic data only. Eval on held-out test sets.
 
+## Data
+
+### D-Synth
+
+Pre-generated D-Synth training data is available for download: [D-Synth (Google Drive)](https://drive.google.com/file/d/1fbSgSQqaNxiUsN1yAmOU3nu-wO0HHzZI/view?usp=sharing)
+
+To generate your own synthetic dermoscopic training data with metric-scale 3D ground truth:
+
+```bash
+# Local generation (requires Mitsuba 3 + S-SYNTH assets)
+python code/data_generation/generate_dermdepth_dataset.py --num_samples 3000 --output data/dermdepth_train/dsynth
+
+# Or use the Colab notebook for cloud generation
+# See notebooks/generate_dermdepth_colab.ipynb
+```
+
+### Real Datasets
+
+Download evaluation datasets from their original sources:
+
+- **SKINL2**: [Skin Lesion Light Field Dataset](https://www.it.pt/AutomaticPage?id=3459) (de Faria et al., 2019)
+- **WoundsDB**: [Chronic Wound Database](https://chronicwounddatabase.eu/) (Juszczyk et al., 2020)
+- **DDI**: [Diverse Dermatology Images](https://aimi.stanford.edu/datasets/ddi-diverse-dermatology-images) (Daneshjou et al., 2022)
+- **sDDI**: [DDI segmentation masks](https://github.com/hectorcarrion/FEDD) used for ruler annotation
+
+Then prepare for training/evaluation:
+
+```bash
+# Convert evaluation datasets to MoGe format
+python code/data_generation/convert_eval_to_moge.py --dataset skinl2 --input data/SKINL2 --output data/dermdepth_train/skinl2_moge
+python code/data_generation/convert_eval_to_moge.py --dataset woundsdb --input data/DB_ALL --output data/dermdepth_train/woundsdb_moge
+
+# Create DDI pseudo-GT from ruler annotations
+python code/data_generation/create_ddi_training_data.py --input data/DDI --output data/dermdepth_train/ddi_moge
+```
+
 ## Repository Structure
 
 ```
@@ -64,13 +100,18 @@ pip install accelerate mlflow-skinny
 
 For D-Synth data generation, you also need [Mitsuba 3](https://mitsuba-renderer.org/) and [S-SYNTH assets](https://huggingface.co/datasets/didsr/ssynth_data).
 
-### Pretrained Model
+### Base Model
 
 Download the MoGe-2 pretrained weights from [HuggingFace](https://huggingface.co/Ruicheng/moge-2-vitl-normal):
 
 ```bash
 cd MoGe && python -c "from huggingface_hub import hf_hub_download; hf_hub_download('Ruicheng/moge-2-vitl-normal', 'pretrained_moge2.pt', local_dir='.')"
 ```
+
+### Fine-tuned checkpoints
+
+Find our checkpoints here: https://drive.google.com/file/d/1_5XDmGT7QVCjGoobeWFQpKBOzp6WD3r7/view?usp=sharing
+Soon to be hosted on HF after review.
 
 ## Training
 
@@ -103,42 +144,6 @@ python code/evaluation/eval_ddi_rulers.py --model MoGe/pretrained_moge2.pt --spl
 
 # Evaluate baselines (DA3, MapAnything, PPD)
 python code/evaluation/eval_baselines.py --method da3 --dataset skinl2
-```
-
-## Data
-
-### D-Synth (Synthetic)
-
-Pre-generated D-Synth training data is available for download: [D-Synth (Google Drive)](https://drive.google.com/file/d/1fbSgSQqaNxiUsN1yAmOU3nu-wO0HHzZI/view?usp=sharing)
-
-To generate your own synthetic dermoscopic training data with metric-scale 3D ground truth:
-
-```bash
-# Local generation (requires Mitsuba 3 + S-SYNTH assets)
-python code/data_generation/generate_dermdepth_dataset.py --num_samples 3000 --output data/dermdepth_train/dsynth
-
-# Or use the Colab notebook for cloud generation
-# See notebooks/generate_dermdepth_colab.ipynb
-```
-
-### Real Datasets
-
-Download evaluation datasets from their original sources:
-
-- **SKINL2**: [Skin Lesion Light Field Dataset](https://www.it.pt/AutomaticPage?id=3459) (de Faria et al., 2019)
-- **WoundsDB**: [Chronic Wound Database](https://chronicwounddatabase.eu/) (Juszczyk et al., 2020)
-- **DDI**: [Diverse Dermatology Images](https://aimi.stanford.edu/datasets/ddi-diverse-dermatology-images) (Daneshjou et al., 2022)
-- **sDDI**: [DDI segmentation masks](https://github.com/hectorcarrion/FEDD) used for ruler annotation
-
-Then prepare for training/evaluation:
-
-```bash
-# Convert evaluation datasets to MoGe format
-python code/data_generation/convert_eval_to_moge.py --dataset skinl2 --input data/SKINL2 --output data/dermdepth_train/skinl2_moge
-python code/data_generation/convert_eval_to_moge.py --dataset woundsdb --input data/DB_ALL --output data/dermdepth_train/woundsdb_moge
-
-# Create DDI pseudo-GT from ruler annotations
-python code/data_generation/create_ddi_training_data.py --input data/DDI --output data/dermdepth_train/ddi_moge
 ```
 
 ## Acknowledgments
