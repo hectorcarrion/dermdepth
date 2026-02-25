@@ -10,7 +10,7 @@ Dermatological practice routinely involves measuring and tracking lesion size, m
 
 | Method | Params | SKINL2 Scale | SI-d1 (%) | WoundsDB Scale | SI-d1 (%) | DDI Ratio |
 |--------|:---:|:---:|:---:|:---:|:---:|:---:|
-| DA3 | 1.4B | 4.16x | 99.6 | 0.67x | 89.1 | 53.6x |
+| Depth Anything v3 | 1.4B | 4.16x | 99.6 | 0.67x | 89.1 | 53.6x |
 | MapAnything | 1.1B | 10.88x | 99.3 | 0.75x | 80.7 | 156.1x |
 | PPD | 831M | 16.21x | 92.0 | 0.66x | 91.3 | 90.4x |
 | MoGe-2 | 331M | 16.10x | 100.0 | 0.62x | 91.1 | 81.0x |
