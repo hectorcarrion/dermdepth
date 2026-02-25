@@ -23,7 +23,7 @@ Scale ratio and DDI ratio target = 1.0x. DermDepth_S: synthetic data only. Eval 
 
 ### D-Synth
 
-Pre-generated D-Synth training data is available for download: [D-Synth (Google Drive)](https://drive.google.com/file/d/1fbSgSQqaNxiUsN1yAmOU3nu-wO0HHzZI/view?usp=sharing)
+Pre-generated D-Synth training data is available for download: [D-Synth](https://storage.googleapis.com/review_submission_bucket/D-Synth_Train.gz)
 
 To generate your own synthetic dermoscopic training data with metric-scale 3D ground truth:
 
@@ -110,8 +110,8 @@ cd MoGe && python -c "from huggingface_hub import hf_hub_download; hf_hub_downlo
 
 ### Fine-tuned checkpoints
 
-Find our checkpoints here:
-https://drive.google.com/file/d/1_5XDmGT7QVCjGoobeWFQpKBOzp6WD3r7/view?usp=sharing
+[DermDepth Checkpoints](https://storage.googleapis.com/review_submission_bucket/paper_checkpoints.tar.gz)
+
 Soon to be hosted on HF after review.
 
 ## Training
