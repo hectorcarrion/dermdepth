@@ -1,8 +1,6 @@
 # DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology
 
-**MICCAI 2026**
-
-Foundation depth models produce excellent relative geometry on dermatological images but systematically mis-estimate metric scale by 4-38x, making them unusable for clinical measurement. DermDepth corrects this by fine-tuning only the scale prediction head (2.1M of 331M parameters, <1%) of MoGe-2 on **D-Synth**, a new synthetic dermoscopic dataset with pixel-perfect 3D ground truth. Progressive refinement with small amounts of real clinical data (346 samples) achieves near-perfect metric scale across three diverse benchmarks, with equitable performance across Fitzpatrick skin tones.
+Dermatological practice routinely involves measuring and tracking lesion size, morphology and texture, as critical components of wound or skin cancer screening, monitoring and diagnosis. These objectives naturally benefit from 3D information, yet the standard capture at point of care remains 2D imaging. We present **DermDepth**, the first single-view metric scale 3D model for the dermatological domain and **D-Synth**, the first synthetic dermoscopic dataset with pixel-perfect 3D information. Training DermDepth on D-Synth corrects metric scale error from over 16x to under 1.1x for real dermoscopic data, while preserving geometric quality and increasing texture richness. Fine-tuning on a small amount of real clinical samples generalizes across three real-world benchmarks spanning the few mm to hundred cm range, diverse skin tones, and chronic wound cases.
 
 ## Key Results
 
@@ -63,9 +61,10 @@ For D-Synth data generation, you also need [Mitsuba 3](https://mitsuba-renderer.
 
 Download evaluation datasets from their original sources:
 
-- **SKINL2**: [Plenoptic dermoscopic depth](https://figshare.com/articles/dataset/SKINL2_-_Skin_Lesion_Light_Field_Dataset/6626502) (de Faria et al., 2019)
-- **WoundsDB**: [Time-of-flight wound depth](http://www.ii.uj.edu.pl/~jusz/WoundsDB.html) (Juszczyk et al., 2020)
-- **DDI**: [Diverse Dermatology Images](https://stanfordaimi.azurewebsites.net/datasets/35866158-8196-48d8-87bf-50dca81df965) (Daneshjou et al., 2022)
+- **SKINL2**: [Skin Lesion Light Field Dataset](https://www.it.pt/AutomaticPage?id=3459) (de Faria et al., 2019)
+- **WoundsDB**: [Chronic Wound Database](https://chronicwounddatabase.eu/) (Juszczyk et al., 2020)
+- **DDI**: [Diverse Dermatology Images](https://aimi.stanford.edu/datasets/ddi-diverse-dermatology-images) (Daneshjou et al., 2022)
+- **sDDI**: [DDI segmentation masks](https://github.com/hectorcarrion/FEDD) used for ruler annotation
 
 Then prepare for training/evaluation:
 
@@ -129,17 +128,6 @@ python code/data_generation/generate_dermdepth_dataset.py --num_samples 3000 --o
 
 # Or use the Colab notebook for cloud generation
 # See notebooks/generate_dermdepth_colab.ipynb
-```
-
-## Citation
-
-```bibtex
-@inproceedings{dermdepth2025,
-  title={DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology},
-  author={Anonymized},
-  booktitle={International Conference on Medical Image Computing and Computer Assisted Intervention (MICCAI)},
-  year={2025}
-}
 ```
 
 ## Acknowledgments
