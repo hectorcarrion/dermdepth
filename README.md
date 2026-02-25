@@ -3,7 +3,7 @@
 Dermatological practice routinely involves measuring and tracking lesion size, morphology and texture, as critical components of wound or skin cancer screening, monitoring and diagnosis. These objectives naturally benefit from 3D information, yet the standard capture at point of care remains 2D imaging. We present **DermDepth**, the first single-view metric scale 3D model for the dermatological domain and **D-Synth**, the first synthetic dermoscopic dataset with pixel-perfect 3D information. Training DermDepth on D-Synth corrects metric scale error from over 16x to under 1.1x for real dermoscopic data, while preserving geometric quality and increasing texture richness. Fine-tuning on a small amount of real clinical samples generalizes across three real-world benchmarks spanning the few mm to hundred cm range, diverse skin tones, and chronic wound cases.
 
 <p align="center">
-  <img src="assets/lesion_reconstruction.gif" width="360" alt="3D lesion reconstruction from a single photograph">
+  <img src="assets/reconstruction_grid.gif" width="720" alt="3D lesion reconstructions from single photographs">
 </p>
 
 ## Key Results
