@@ -124,7 +124,9 @@ python code/evaluation/eval_baselines.py --method da3 --dataset skinl2
 
 ## D-Synth Dataset
 
-Generate synthetic dermoscopic training data with metric-scale 3D ground truth:
+Pre-generated D-Synth training data is available for download: [D-Synth (Google Drive)](https://drive.google.com/file/d/1fbSgSQqaNxiUsN1yAmOU3nu-wO0HHzZI/view?usp=sharing)
+
+To generate your own synthetic dermoscopic training data with metric-scale 3D ground truth:
 
 ```bash
 # Local generation (requires Mitsuba 3 + S-SYNTH assets)
