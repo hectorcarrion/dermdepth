@@ -1,6 +1,6 @@
 # DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology
 
-**MICCAI 2025**
+**MICCAI 2026**
 
 Foundation depth models produce excellent relative geometry on dermatological images but systematically mis-estimate metric scale by 4-38x, making them unusable for clinical measurement. DermDepth corrects this by fine-tuning only the scale prediction head (2.1M of 331M parameters, <1%) of MoGe-2 on **D-Synth**, a new synthetic dermoscopic dataset with pixel-perfect 3D ground truth. Progressive refinement with small amounts of real clinical data (346 samples) achieves near-perfect metric scale across three diverse benchmarks, with equitable performance across Fitzpatrick skin tones.
 
