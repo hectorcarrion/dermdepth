@@ -123,11 +123,12 @@ code/processing/
 
 # Misc artifacts
 *.mp4
+!assets/*.mp4
 *.pdf
 ddi_000379_d3_package/
+DermDepth_DDI_Animations/
 PAPER_OUTLINE.md
 ddi_label_analysis.py
-lesion_reconstruction.mp4
 
 # Claude Code
 .claude/
