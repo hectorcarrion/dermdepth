@@ -110,7 +110,8 @@ cd MoGe && python -c "from huggingface_hub import hf_hub_download; hf_hub_downlo
 
 ### Fine-tuned checkpoints
 
-Find our checkpoints here: https://drive.google.com/file/d/1_5XDmGT7QVCjGoobeWFQpKBOzp6WD3r7/view?usp=sharing
+Find our checkpoints here:
+https://drive.google.com/file/d/1_5XDmGT7QVCjGoobeWFQpKBOzp6WD3r7/view?usp=sharing
 Soon to be hosted on HF after review.
 
 ## Training
