@@ -23,7 +23,15 @@ Scale ratio and DDI ratio target = 1.0x. DermDepth_S: synthetic data only. Eval 
 
 ### D-Synth
 
-Pre-generated D-Synth training data is available for download: https://storage.googleapis.com/review_submission_bucket/D-Synth_Train.gz
+Pre-generated D-Synth training data is hosted on Hugging Face: [hcarrion/D-Synth](https://huggingface.co/datasets/hcarrion/D-Synth).
+
+```bash
+# CLI download
+hf download hcarrion/D-Synth --repo-type dataset --local-dir data/dermdepth_train/dsynth
+
+# Or via Python
+python -c "from huggingface_hub import snapshot_download; snapshot_download('hcarrion/D-Synth', repo_type='dataset', local_dir='data/dermdepth_train/dsynth')"
+```
 
 To generate your own synthetic dermoscopic training data with metric-scale 3D ground truth:
 
@@ -110,9 +118,22 @@ cd MoGe && python -c "from huggingface_hub import hf_hub_download; hf_hub_downlo
 
 ### Fine-tuned checkpoints
 
-Checkpoints are found here: https://storage.googleapis.com/review_submission_bucket/paper_checkpoints.tar.gz
+Checkpoints are hosted on Hugging Face: [hcarrion/DermDepth](https://huggingface.co/hcarrion/DermDepth).
 
-Soon to be hosted on HF after review.
+| Filename | Training data | Notes |
+|---|---|---|
+| `DermDepth_Synth.pt` | D-Synth only | "DermDepth_S" in the paper (synthetic-only baseline). |
+| `DermDepth_Synth_SKINL2_WoundsDB.pt` | D-Synth → SKINL2 + WoundsDB | Intermediate stage. |
+| `DermDepth_Synth_SKINL2_WoundsDB_DDI.pt` | D-Synth → SKINL2 + WoundsDB → DDI pseudo-GT | **Best model** (paper "DermDepth" results). |
+| `DermDepth_Synth_Normals.pt` | D-Synth, normal-head emphasis | Alternative for normal-map use. |
+
+```bash
+# Single checkpoint
+python -c "from huggingface_hub import hf_hub_download; hf_hub_download('hcarrion/DermDepth', 'DermDepth_Synth_SKINL2_WoundsDB_DDI.pt', local_dir='checkpoints')"
+
+# All checkpoints
+hf download hcarrion/DermDepth --local-dir checkpoints
+```
 
 ## Training
 
