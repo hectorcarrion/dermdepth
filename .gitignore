@@ -125,6 +125,7 @@ code/processing/
 *.mp4
 !assets/*.mp4
 *.pdf
+!Paper-*.pdf
 ddi_000379_d3_package/
 DermDepth_DDI_Animations/
 PAPER_OUTLINE.md

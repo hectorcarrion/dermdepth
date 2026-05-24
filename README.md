@@ -1,12 +1,28 @@
 # DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology
 
+[![Paper](https://img.shields.io/badge/Paper-MICCAI%202026-b31b1b.svg?logo=adobeacrobatreader&logoColor=white)](Paper-5594.pdf)
+[![arXiv](https://img.shields.io/badge/arXiv-embargoed%20until%20Sept%202027-lightgrey.svg?logo=arxiv&logoColor=white)](#paper-availability)
+[![Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Dataset-D--Synth-yellow)](https://huggingface.co/datasets/hcarrion/D-Synth)
+[![Model](https://img.shields.io/badge/%F0%9F%A4%97%20Model-DermDepth-yellow)](https://huggingface.co/hcarrion/DermDepth)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Dermatological practice routinely involves measuring and tracking lesion size, morphology and texture, as critical components of wound or skin cancer screening, monitoring and diagnosis. These objectives naturally benefit from 3D information, yet the standard capture at point of care remains 2D imaging. We present **DermDepth**, the first single-view metric scale 3D model for the dermatological domain and **D-Synth**, the first synthetic dermoscopic dataset with pixel-perfect 3D information. Training DermDepth on D-Synth corrects metric scale error from over 16x to under 1.1x for real dermoscopic data, while preserving geometric quality and increasing texture richness. Fine-tuning on a small amount of real clinical samples generalizes across three real-world benchmarks spanning the few mm to hundred cm range, diverse skin tones, and chronic wound cases.
 
 <p align="center">
   <img src="assets/reconstruction_grid.gif" width="720" alt="3D lesion reconstructions from single photographs">
 </p>
 
+## Paper Availability
+
+The MICCAI 2026 camera-ready PDF is hosted directly in this repository: **[Paper-5594.pdf](Paper-5594.pdf)**. The arXiv version is **embargoed by Springer until approximately September 2027** (one year after open-access publication at MICCAI 2026). The version-of-record will appear in the *Lecture Notes in Computer Science* proceedings volume shortly before the conference (Sept 27 – Oct 1, 2026, Strasbourg).
+
 ## Key Results
+
+<p align="center">
+  <img src="assets/DD_2Bold.png" width="900" alt="DermDepth scale-error training trajectory and DDI volume estimates">
+</p>
+
+DermDepth (★) lies closest to the **(1×, 1×)** perfect-scale target on both SKINL2 (dermoscopic) and WoundsDB (macroscopic) benchmarks while all foundation baselines over- or under-predict by **2–16×**. On DDI, predicted lesion volumes match the ranges reported in dermatological literature (right).
 
 | Method | Params | SKINL2 Scale | SI-d1 (%) | WoundsDB Scale | SI-d1 (%) | DDI Ratio |
 |--------|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -18,6 +34,22 @@ Dermatological practice routinely involves measuring and tracking lesion size, m
 | **DermDepth** | **2.1M ft** | **0.87x** | **100.0** | **0.91x** | **92.6** | **1.95x** |
 
 Scale ratio and DDI ratio target = 1.0x. DermDepth_S: synthetic data only. Eval on held-out test sets.
+
+### Qualitative comparison
+
+<p align="center">
+  <img src="assets/DD_3Bold.png" width="900" alt="DermDepth qualitative depth and normal predictions vs baselines">
+</p>
+
+Rows: SKINL2 (dermoscopic), WoundsDB (chronic wounds), DDI (diverse skin tones). Columns from left: input RGB, ground-truth depth (when available), DepthAnything v3, MapAnything, PPD, DermDepth, MoGe-2 normals, DermDepth normals. DermDepth's per-pixel `Scale` factors hover around 1.0× across modalities while baselines mis-scale by 2–15×.
+
+### Synthetic training data (D-Synth)
+
+<p align="center">
+  <img src="assets/DD_1.png" width="900" alt="D-Synth synthetic dermoscopic samples with depth and surface-normal ground truth">
+</p>
+
+D-Synth provides 3,132+ rendered dermoscopic samples with pixel-perfect metric depth, surface normals, and camera intrinsics — enabling supervised training where real metric-scale 3D dermatological data does not exist.
 
 ## Data
 
@@ -173,6 +205,19 @@ python code/evaluation/eval_baselines.py --method da3 --dataset skinl2
 This work builds on:
 - [MoGe-2](https://github.com/microsoft/MoGe) (Wang et al., 2025) for the base architecture
 - [S-SYNTH](https://github.com/DIDSR/ssynth-release) (Kim et al., MICCAI 2024) for the synthetic skin rendering framework
+
+## Citation
+
+```bibtex
+@inproceedings{carrion2026dermdepth,
+  title     = {DermDepth: Toward Monocular Metric Scale 3D Reconstruction Models for Dermatology},
+  author    = {Carri{\'o}n, H{\'e}ctor and Norouzi, Narges},
+  booktitle = {Medical Image Computing and Computer-Assisted Intervention (MICCAI)},
+  year      = {2026},
+  publisher = {Springer},
+  series    = {Lecture Notes in Computer Science}
+}
+```
 
 ## License
 
